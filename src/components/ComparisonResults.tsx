@@ -30,7 +30,7 @@ export const ComparisonResults = ({ assets }: ComparisonResultsProps) => {
               <TableCell>{asset.id}</TableCell>
               <TableCell>{asset.name}</TableCell>
               <TableCell>
-                <Badge variant={asset.isReporting ? "success" : "destructive"}>
+                <Badge variant={asset.isReporting ? "default" : "destructive"}>
                   {asset.isReporting ? 'Reporting' : 'Not Reporting'}
                 </Badge>
               </TableCell>

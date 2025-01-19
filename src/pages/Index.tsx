@@ -4,6 +4,8 @@ import { ComparisonResults } from '@/components/ComparisonResults';
 import { Statistics } from '@/components/Statistics';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { fetchRapid7Assets } from '@/utils/rapid7Api';
+import { Input } from '@/components/ui/input';
 
 interface Asset {
   id: string;
@@ -13,25 +15,38 @@ interface Asset {
 }
 
 const Index = () => {
-  const [rapid7File, setRapid7File] = useState<File | null>(null);
   const [inventoryFile, setInventoryFile] = useState<File | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [apiKey, setApiKey] = useState('');
   
-  const handleCompare = () => {
-    if (!rapid7File || !inventoryFile) {
-      toast.error('Please upload both files first');
+  const handleCompare = async () => {
+    if (!inventoryFile) {
+      toast.error('Please upload the inventory file first');
       return;
     }
 
-    // Simulated comparison logic - replace with actual file parsing
-    const mockAssets: Asset[] = [
-      { id: '001', name: 'Server-A', isReporting: true, lastSeen: '2024-02-20' },
-      { id: '002', name: 'Server-B', isReporting: false },
-      { id: '003', name: 'Server-C', isReporting: true, lastSeen: '2024-02-19' },
-    ];
-    
-    setAssets(mockAssets);
-    toast.success('Comparison completed');
+    if (!apiKey) {
+      toast.error('Please enter your Rapid7 API key');
+      return;
+    }
+
+    try {
+      const rapid7Assets = await fetchRapid7Assets(apiKey);
+      
+      // For now, we'll use mock comparison logic
+      // In a real implementation, you would parse the inventory file and compare with rapid7Assets
+      const mockAssets: Asset[] = rapid7Assets.map(asset => ({
+        id: asset.id,
+        name: asset.hostName,
+        isReporting: !!asset.lastAssessedFor,
+        lastSeen: asset.lastAssessedFor || undefined,
+      }));
+      
+      setAssets(mockAssets);
+      toast.success('Comparison completed');
+    } catch (error) {
+      toast.error('Failed to fetch Rapid7 assets');
+    }
   };
 
   const handleExport = () => {
@@ -51,16 +66,23 @@ const Index = () => {
       <div>
         <h1 className="text-3xl font-bold mb-4">Asset Log Verification</h1>
         <p className="text-muted-foreground">
-          Upload your Rapid7 logs and asset inventory to verify reporting status.
+          Connect to Rapid7 and upload your asset inventory to verify reporting status.
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <FileUpload
-          onFileSelect={setRapid7File}
-          accept=".csv,.xlsx"
-          label="Upload Rapid7 Logs"
-        />
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Rapid7 API Key
+          </label>
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Enter your Rapid7 API key"
+            className="w-full"
+          />
+        </div>
         <FileUpload
           onFileSelect={setInventoryFile}
           accept=".csv,.xlsx"
@@ -69,8 +91,8 @@ const Index = () => {
       </div>
 
       <div className="flex justify-center gap-4">
-        <Button onClick={handleCompare} disabled={!rapid7File || !inventoryFile}>
-          Compare Files
+        <Button onClick={handleCompare} disabled={!apiKey || !inventoryFile}>
+          Compare Assets
         </Button>
         <Button variant="outline" onClick={handleExport} disabled={assets.length === 0}>
           Export Results
